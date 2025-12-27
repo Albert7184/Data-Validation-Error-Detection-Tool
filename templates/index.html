@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Data Validation Tool</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* TỐI ƯU GIAO DIỆN & MÀU SẮC NÚT BẤM */
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            font-family: sans-serif;
+        }
+
+        .input-wrapper {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        #numbers {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            border: 2px solid #cbd5e0;
+            border-radius: 10px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        #numbers:focus {
+            border-color: #3182ce;
+            outline: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn-check {
+            flex: 3;
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .btn-check:hover {
+            background: #2b6cb0;
+        }
+
+        /* NÚT XÓA ĐÃ ĐƯỢC CHỈNH MÀU ĐẬM HƠN */
+        .btn-clear {
+            flex: 1;
+            background: #718096;
+            /* Màu xám đậm (Slate Gray) */
+            color: white;
+            /* Đổi chữ sang trắng để nổi bật trên nền đậm */
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+
+        .btn-clear:hover {
+            background: #4a5568;
+        }
+
+        /* Khi di chuột vào sẽ đậm hơn nữa */
+
+        .result-section {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .error-box {
+            background: #fff5f5;
+            border-left: 5px solid #fc8181;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #edf2f7;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Python Data Validation</h2>
+        <p>Phát hiện lỗi, trùng lặp và thống kê dữ liệu.</p>
+
+        <form onsubmit="checkData(event)">
+            <div class="input-wrapper">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Nhập dãy số (cách nhau bằng dấu
+                    phẩy):</label>
+                <input type="text" id="numbers" required placeholder="Ví dụ: 10, 20, abc, 50">
+            </div>
+
+            <div class="action-buttons">
+                <button type="submit" class="btn-check">Kiểm tra ngay</button>
+                <button type="button" class="btn-clear" onclick="manualClear()">Xóa</button>
+            </div>
+        </form>
+
+        <div id="result"></div>
+
+        <div id="history-section" style="margin-top: 30px; border-top: 2px solid #edf2f7; padding-top: 20px;">
+            <h3 style="margin-bottom: 15px;">📜 Lịch sử gần nhất</h3>
+            <div id="history-list">
+                <p style="color: #a0aec0;">Chưa có dữ liệu kiểm tra.</p>
+            </div>
+        </div>
+        <div
+            style="margin-top: 20px; padding: 15px; border: 2px dashed #cbd5e0; border-radius: 10px; text-align: center;">
+            <label>Hoặc tải lên file Excel (.xlsx) / CSV:</label><br><br>
+            <input type="file" id="fileInput" accept=".xlsx, .csv">
+            <button type="button" onclick="uploadFile()"
+                style="background: #48bb78; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Tải
+                lên & Kiểm tra</button>
+        </div>
+    </div>
+
+
+    {% if errors %}
+        <h3>Lỗi phát hiện:</h3>
+        <ul>
+            {% for e in errors %}
+                <li>{{ e }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>
+
+<script>
+function checkData() {
+    const numbers = document.getElementById("numbers").value;
+
+    fetch("/validate", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ numbers })
+    })
+    .then(res => res.json())
+    .then(data => {
+        let html = "<ul>";
+        data.forEach(item => {
+            html += `<li>${item}</li>`;
+        });
+        html += "</ul>";
+        document.getElementById("result").innerHTML = html;
+    });
+}
+</script>
+
+
+</html>
