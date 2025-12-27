@@ -17,9 +17,10 @@ Một ứng dụng web mạnh mẽ được xây dựng bằng **FastAPI** để
 * **Deployment:** GitHub, Render.
 
 ## 🔗 Live Demo
-👉 [Trải nghiệm ứng dụng tại đây](https://python-data-validation-bug-detection.onrender.com)
+👉 [Trải nghiệm ứng dụng tại đây]https://data-validation-error-detection-tool.onrender.com/?
 
 ## 🛠 Hướng dẫn cài đặt (Local)
 1. **Clone dự án:**
    ```bash
+
    git clone [https://github.com/Albert7184/Python-Data-Validation-Bug-Detection-Tool.git](https://github.com/Albert7184/Python-Data-Validation-Bug-Detection-Tool.git)
