@@ -177,6 +177,8 @@ Python Data Validation & Anomaly Detection System
 
 ---
 
-🌐 Link web đã deploy: https://data-validation-error-detection-tool.onrender.com/
+🔗 Live Demo (Web App):
+👉 https://data-validation-error-detection-tool.onrender.com/
 
 ✨ *Built with statistical intelligence, scientific rigor, and explainable AI principles.*
+
