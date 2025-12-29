@@ -115,13 +115,21 @@ Hệ thống được xây dựng theo mô hình **Client–Server**, tách bi�
 ✨ *Built with Data, Science & Explainable AI*
 
 ## Cấu trúc của Project
+
 ```
-Data-Validation-Error-Detection-Tool/
-├── README.md
-├── app.py
-├── requirements.txt
-├── static/
-│   └── style.css
-└── templates/
-    └── index.html
+Python Data Validation & Bug Detection Tool
+├─ app.py
+├─ core
+│  └─ analyzer.py
+├─ pictures
+│  ├─ dashboard.png
+│  ├─ test 1.png
+│  └─ test 2.png
+├─ README.md
+├─ requirements.txt
+├─ static
+│  └─ style.css
+└─ templates
+   └─ index.html
+
 ```
