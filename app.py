@@ -1,118 +1,117 @@
-from fastapi import FastAPI, Request, HTTPException
-from pydantic import BaseModel, EmailStr, Field
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from pydantic import BaseModel
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import pandas as pd
-from fastapi import UploadFile, File
-# 1. Khởi tạo ứng dụng
+import numpy as np
+import os
+import sqlite3
+import io
+from datetime import datetime
+
 app = FastAPI()
+
+# --- Khởi tạo thư mục ---
+for folder in ["static", "exports", "templates"]:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# --- DATABASE SETUP ---
+DB_NAME = "history_data.db"
+def init_db():
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS validation_history 
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, total REAL, count INTEGER, status TEXT)''')
+init_db()
 
 class NumberListData(BaseModel):
     numbers: str
 
-@app.post("/upload-excel")
-async def upload_excel(file: UploadFile = File(...)):
-    try:
-        # Đọc file Excel hoặc CSV
-        df = pd.read_excel(file.file) if file.filename.endswith('.xlsx') else pd.read_csv(file.file)
-        
-        # Giả sử file có cột tên là 'data'
-        if 'data' not in df.columns:
-            return {"errors": ["File cần có cột tên là 'data'"]}
-        
-        # Chuyển cột data thành chuỗi để dùng lại logic cũ của bạn
-        data_str = ",".join(df['data'].astype(str).tolist())
-        
-        # Gọi lại logic validate của bạn (hoặc tách logic đó ra hàm riêng để dùng chung)
-        # Ở đây mình demo trả về số dòng đã đọc được
-        return {
-            "message": f"Đã đọc thành công {len(df)} dòng",
-            "preview": df.head().to_dict() # Gửi 5 dòng đầu lên web để xem trước
-        }
-    except Exception as e:
-        return {"errors": [f"Lỗi đọc file: {str(e)}"]}
+# --- HÀM XỬ LÝ LOGIC AI (Z-SCORE) ---
+def process_validation_logic(valid_numbers):
+    if not valid_numbers:
+        return {"status": "Reject", "errors": ["Dữ liệu trống"]}
 
-@app.post("/validate")
-async def validate_numbers(data: NumberListData):
-    # Ghi nhật ký đầu vào để theo dõi (Phần bổ sung)
-    print(f"📥 Nhận dữ liệu kiểm tra: {data.numbers}")
+    arr = np.array(valid_numbers)
+    total_sum = float(np.sum(arr))
+    mean_val = float(np.mean(arr))
+    std_val = float(np.std(arr))
+    count = len(valid_numbers)
+
+    # Thuật toán Z-Score phát hiện dị thường
+    anomalies = []
+    ai_score = 100
+    if count >= 3 and std_val > 0:
+        z_scores = np.abs((arr - mean_val) / std_val)
+        anomalies = arr[z_scores > 2.0].tolist()
+        ai_score = int(((count - len(anomalies)) / count) * 100)
+
+    status = "Accept" if ai_score >= 70 else "Reject"
     
-    raw_list = data.numbers.split(',')
-    errors = []
-    valid_numbers = []
-    duplicates = set()
-    seen = set()
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute("INSERT INTO validation_history (timestamp, total, count, status) VALUES (?, ?, ?, ?)",
+                     (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), round(total_sum, 2), count, status))
 
-    for item in raw_list:
-        clean_item = item.strip()
-        if clean_item == "": continue
-            
-        try:
-            num = float(clean_item)
-            if num < 0 or num > 100:
-                errors.append(f"Số {num} nằm ngoài dải cho phép (0-100).")
-            else:
-                if num in seen:
-                    duplicates.add(num)
-                else:
-                    seen.add(num)
-                    valid_numbers.append(num)
-        except ValueError:
-            errors.append(f"'{clean_item}' không phải là số hợp lệ.")
-
-    stats = {}
-    if valid_numbers:
-        stats = {
-            "total": sum(valid_numbers),
-            "average": round(sum(valid_numbers) / len(valid_numbers), 2),
-            "count": len(valid_numbers)
-        }
-
-    # Ghi nhật ký kết quả phân tích (Phần bổ sung)
-    print(f"✅ Kết quả: {len(valid_numbers)} số hợp lệ, {len(errors)} lỗi.")
-    
     return {
-        "errors": errors,
-        "duplicates": list(duplicates),
-        "stats": stats
+        "status": status,
+        "sum": total_sum,
+        "average": round(mean_val, 2),
+        "count": count,
+        "ai_score": ai_score,
+        "anomalies": anomalies[:10],
+        "results": valid_numbers
     }
-
-# Cấu hình Static và Templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- Giữ nguyên các Logic Validation của bạn ở bên dưới ---
+@app.post("/validate")
+async def validate_numbers(data: NumberListData):
+    try:
+        raw_items = data.numbers.replace('\n', ',').split(',')
+        numbers = [float(i.strip()) for i in raw_items if i.strip()]
+        return process_validation_logic(numbers)
+    except:
+        return {"status": "Reject", "errors": ["Định dạng số không hợp lệ"]}
 
-class Product(BaseModel):
-    name: str
-    price: float = Field(gt=0)
-    quantity: int = Field(ge=0)
+@app.post("/upload-excel")
+async def upload_excel(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        df = pd.read_excel(io.BytesIO(contents), engine='openpyxl')
+        numeric_cols = df.select_dtypes(include=[np.number])
+        if numeric_cols.empty:
+            return {"status": "Reject", "errors": ["File không có cột số"]}
+        all_numbers = numeric_cols.values.flatten()
+        cleaned_numbers = all_numbers[~np.isnan(all_numbers)].tolist()
+        if not cleaned_numbers:
+            return {"status": "Reject", "errors": ["Không tìm thấy dữ liệu số"]}
+        return process_validation_logic(cleaned_numbers)
+    except Exception as e:
+        return {"status": "Reject", "errors": [str(e)]}
 
-@app.post("/validate-product/")
-async def validate_product(product: Product):
-    return {"status": "Hợp lệ", "message": f"Sản phẩm {product.name} đã được kiểm tra!"}
+@app.post("/export-report")
+async def export_report(data: dict):
+    try:
+        results = data.get('results', [])
+        df = pd.DataFrame(results, columns=["Gia_tri"])
+        file_path = f"exports/Report_{datetime.now().strftime('%H%M%S')}.xlsx"
+        df.to_excel(file_path, index=False)
+        return FileResponse(file_path, filename="Bao_cao_AI.xlsx")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-class UserRegistration(BaseModel):
-    username: str = Field(min_length=3, max_length=20)
-    email: EmailStr
-    age: int = Field(ge=18, le=100)
+@app.get("/get-history")
+async def get_history():
+    with sqlite3.connect(DB_NAME) as conn:
+        rows = conn.execute("SELECT timestamp, total, status FROM validation_history ORDER BY id DESC LIMIT 5").fetchall()
+    return [{"time": r[0], "sum": r[1], "status": r[2]} for r in rows]
 
-@app.post("/verify-user/")
-async def verify_user(user: UserRegistration):
-    return {"status": "Thành công", "message": f"Người dùng {user.username} hợp lệ!"}
-
-# API: Kiểm tra Logic thời gian
-@app.post("/check-logic/")
-async def check_logic(start_year: int, end_year: int):
-    if end_year < start_year:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Lỗi logic: Năm kết thúc ({end_year}) không thể trước năm bắt đầu ({start_year})!"
-        )
-    duration = end_year - start_year
-    return {"status": "Hợp lệ", "duration": duration}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

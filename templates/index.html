@@ -1,176 +1,238 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
-    <title>Data Validation Tool</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Data Validator | Professional Data Analytics Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* TỐI ƯU GIAO DIỆN & MÀU SẮC NÚT BẤM */
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            font-family: sans-serif;
-        }
-
-        .input-wrapper {
-            width: 100%;
-            margin-bottom: 15px;
-        }
-
-        #numbers {
-            width: 100%;
-            padding: 18px;
-            font-size: 18px;
-            border: 2px solid #cbd5e0;
-            border-radius: 10px;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-
-        #numbers:focus {
-            border-color: #3182ce;
-            outline: none;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-        }
-
-        .btn-check {
-            flex: 3;
-            background: #3182ce;
-            color: white;
-            border: none;
-            padding: 15px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .btn-check:hover {
-            background: #2b6cb0;
-        }
-
-        /* NÚT XÓA ĐÃ ĐƯỢC CHỈNH MÀU ĐẬM HƠN */
-        .btn-clear {
-            flex: 1;
-            background: #718096;
-            /* Màu xám đậm (Slate Gray) */
-            color: white;
-            /* Đổi chữ sang trắng để nổi bật trên nền đậm */
-            border: none;
-            padding: 15px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            transition: background 0.2s;
-        }
-
-        .btn-clear:hover {
-            background: #4a5568;
-        }
-
-        /* Khi di chuột vào sẽ đậm hơn nữa */
-
-        .result-section {
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .error-box {
-            background: #fff5f5;
-            border-left: 5px solid #fc8181;
-        }
-
-        .history-item {
-            padding: 10px;
-            border-bottom: 1px solid #edf2f7;
-            display: flex;
-            justify-content: space-between;
-        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #loadingOverlay { display: none; }
     </style>
 </head>
-
-<body>
-    <div class="container">
-        <h2>Python Data Validation</h2>
-        <p>Phát hiện lỗi, trùng lặp và thống kê dữ liệu.</p>
-
-        <form onsubmit="checkData(event)">
-            <div class="input-wrapper">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Nhập dãy số (cách nhau bằng dấu
-                    phẩy):</label>
-                <input type="text" id="numbers" required placeholder="Ví dụ: 10, 20, abc, 50">
-            </div>
-
-            <div class="action-buttons">
-                <button type="submit" class="btn-check">Kiểm tra ngay</button>
-                <button type="button" class="btn-clear" onclick="manualClear()">Xóa</button>
-            </div>
-        </form>
-
-        <div id="result"></div>
-
-        <div id="history-section" style="margin-top: 30px; border-top: 2px solid #edf2f7; padding-top: 20px;">
-            <h3 style="margin-bottom: 15px;">📜 Lịch sử gần nhất</h3>
-            <div id="history-list">
-                <p style="color: #a0aec0;">Chưa có dữ liệu kiểm tra.</p>
-            </div>
-        </div>
-        <div
-            style="margin-top: 20px; padding: 15px; border: 2px dashed #cbd5e0; border-radius: 10px; text-align: center;">
-            <label>Hoặc tải lên file Excel (.xlsx) / CSV:</label><br><br>
-            <input type="file" id="fileInput" accept=".xlsx, .csv">
-            <button type="button" onclick="uploadFile()"
-                style="background: #48bb78; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Tải
-                lên & Kiểm tra</button>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center text-white">
+        <div class="text-center">
+            <i class="fas fa-brain fa-spin text-5xl mb-4 text-indigo-400"></i>
+            <p class="font-medium text-xl">Thuật toán Z-Score đang quét dữ liệu...</p>
         </div>
     </div>
 
+    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+        <div class="bg-gradient-to-r from-indigo-800 to-blue-700 p-8 text-white relative">
+            <div class="relative z-10">
+                <h1 class="text-3xl font-extrabold flex items-center gap-3">
+                    <i class="fas fa-microchip text-yellow-400"></i> AI Data Validation Tool
+                </h1>
+                <p class="text-indigo-100 mt-2 opacity-90 font-light text-lg italic underline decoration-indigo-400">Powered by Z-Score Anomaly Detection Model</p>
+            </div>
+            <i class="fas fa-chart-line absolute right-8 bottom-4 text-7xl opacity-10"></i>
+        </div>
 
-    {% if errors %}
-        <h3>Lỗi phát hiện:</h3>
-        <ul>
-            {% for e in errors %}
-                <li>{{ e }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+        <div class="p-6 md:p-10 space-y-8">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <label class="block text-sm font-bold text-gray-700 uppercase tracking-widest">Manual Data Entry:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="numberInput" placeholder="Ví dụ: 85, 92, 120, 88..." class="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-200 outline-none transition-all font-mono">
+                        <button onclick="validateManual()" class="bg-indigo-600 text-white px-6 rounded-xl hover:bg-indigo-700 shadow-lg transition-transform active:scale-95">
+                            <i class="fas fa-bolt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <label class="block text-sm font-bold text-gray-700 uppercase tracking-widest">Dataset Upload:</label>
+                    <div class="border-2 border-dashed border-indigo-200 rounded-xl p-4 text-center hover:border-indigo-500 hover:bg-indigo-50 transition-all cursor-pointer relative group">
+                        <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".xlsx, .csv" onchange="uploadFile()">
+                        <div class="text-gray-500">
+                            <i class="fas fa-file-excel text-3xl mb-1 text-indigo-500 group-hover:scale-110 transition-transform"></i>
+                            <p class="font-semibold text-sm" id="fileNameDisplay">Chọn tệp dữ liệu sạch</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultArea" class="hidden animate-fade-in space-y-6">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div id="statusBox" class="md:col-span-2 p-6 rounded-2xl flex items-start gap-4 shadow-sm border">
+                        <i id="statusIcon" class="fas text-3xl mt-1"></i>
+                        <div>
+                            <h3 class="font-black text-xl tracking-tight" id="statusTitle">HỆ THỐNG PHÂN TÍCH</h3>
+                            <p id="statusDesc" class="mt-1 font-medium"></p>
+                            <div id="aiAdvice" class="mt-4 p-3 bg-white/50 rounded-lg text-sm font-semibold italic border-l-4 border-indigo-500 text-indigo-900"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border-2 border-indigo-100 flex flex-col justify-center text-center shadow-lg relative overflow-hidden text-indigo-600">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                        <p class="text-gray-400 text-[10px] font-black uppercase tracking-tighter">Reliability Score</p>
+                        <p class="text-5xl font-black mt-2 tracking-tighter" id="aiScore">0%</p>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-100">
+                            <p class="text-blue-500 text-[10px] font-black uppercase">Mean</p>
+                            <p class="text-xl font-bold text-blue-800" id="valAvg">0</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-xl text-center border border-green-100">
+                            <p class="text-green-500 text-[10px] font-black uppercase">Sum</p>
+                            <p class="text-xl font-bold text-green-800" id="valSum">0</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-xl text-center border border-purple-100">
+                            <p class="text-purple-500 text-[10px] font-black uppercase">Samples</p>
+                            <p class="text-xl font-bold text-purple-800" id="valCount">0</p>
+                        </div>
+                        <div id="alertBox" class="col-span-3 space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-inner h-[250px]">
+                        <canvas id="dataChart"></canvas>
+                    </div>
+                </div>
+
+                <button onclick="downloadReport()" class="w-full bg-indigo-900 text-white py-4 rounded-xl hover:bg-black transition-all font-black shadow-xl flex items-center justify-center gap-3 tracking-widest uppercase">
+                    <i class="fas fa-file-export"></i> Xuất báo cáo (.xlsx)
+                </button>
+            </div>
+
+            <div class="mt-10 border-t pt-8">
+                <h3 class="font-black text-gray-800 mb-6 flex items-center gap-2 text-lg uppercase tracking-tight">
+                    <i class="fas fa-database text-indigo-500"></i> Audit History
+                </h3>
+                <div id="historyList" class="grid gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = {};
+        let myChart = null;
+
+        function toggleLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+            
+            document.getElementById('fileNameDisplay').innerText = fileInput.files[0].name;
+            toggleLoading(true);
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload-excel', { method: 'POST', body: formData });
+                const data = await response.json();
+                showResult(data, response.ok);
+            } catch (error) {
+                alert("Lỗi kết nối Server!");
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function validateManual() {
+            const input = document.getElementById('numberInput').value;
+            if (!input) return alert("Vui lòng nhập dữ liệu!");
+            toggleLoading(true);
+            try {
+                const response = await fetch('/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ numbers: input })
+                });
+                const result = await response.json();
+                showResult(result, response.ok);
+            } catch (e) {
+                alert("Lỗi kết nối!");
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        function showResult(data, isSuccess) {
+            if (data.errors) return alert(data.errors[0]);
+            
+            currentData = data;
+            document.getElementById('resultArea').classList.remove('hidden');
+            document.getElementById('valSum').innerText = data.sum.toLocaleString();
+            document.getElementById('valAvg').innerText = data.average;
+            document.getElementById('valCount').innerText = data.count;
+            document.getElementById('aiScore').innerText = data.ai_score + "%";
+
+            const statusBox = document.getElementById('statusBox');
+            if (isSuccess && data.status === "Accept") {
+                statusBox.className = "md:col-span-2 p-6 rounded-2xl flex items-start gap-4 shadow-sm border-2 bg-green-50 border-green-200 text-green-900";
+                document.getElementById('statusTitle').innerText = "DATA AUDIT: PASSED";
+                document.getElementById('statusIcon').className = "fas fa-shield-check text-3xl mt-1 text-green-600";
+                document.getElementById('aiAdvice').innerHTML = "🤖 <b>AI Insights:</b> Dữ liệu tin cậy. Z-Score ổn định.";
+            } else {
+                statusBox.className = "md:col-span-2 p-6 rounded-2xl flex items-start gap-4 shadow-sm border-2 bg-red-50 border-red-200 text-red-900";
+                document.getElementById('statusTitle').innerText = "DATA AUDIT: FAILED";
+                document.getElementById('statusIcon').className = "fas fa-exclamation-triangle text-3xl mt-1 text-red-600";
+                document.getElementById('aiAdvice').innerHTML = "🤖 <b>AI Insights:</b> Cảnh báo! Phát hiện dị thường (Outliers).";
+            }
+
+            updateChart(data.results);
+            loadHistory();
+        }
+
+        function updateChart(results) {
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            const displayValues = results.slice(0, 50);
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: displayValues.map((_, i) => i + 1),
+                    datasets: [{
+                        label: 'Dữ liệu quét',
+                        data: displayValues,
+                        borderColor: '#4338ca',
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(67, 56, 202, 0.05)'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        async function downloadReport() {
+            if (!currentData.results) return;
+            const response = await fetch('/export-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentData)
+            });
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Report_${new Date().getTime()}.xlsx`;
+            a.click();
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch('/get-history');
+                const history = await res.json();
+                document.getElementById('historyList').innerHTML = history.map(h => `
+                    <div class="flex justify-between items-center p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                        <span class="text-[10px] text-gray-400 font-mono">${h.time}</span>
+                        <div class="font-black text-gray-600">SUM: ${h.sum.toLocaleString()}</div>
+                        <span class="${h.status === 'Accept' ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'} px-4 py-1 rounded-full text-[10px] font-black uppercase">${h.status}</span>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+        loadHistory();
+    </script>
 </body>
-</html>
-
-<script>
-function checkData() {
-    const numbers = document.getElementById("numbers").value;
-
-    fetch("/validate", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ numbers })
-    })
-    .then(res => res.json())
-    .then(data => {
-        let html = "<ul>";
-        data.forEach(item => {
-            html += `<li>${item}</li>`;
-        });
-        html += "</ul>";
-        document.getElementById("result").innerHTML = html;
-    });
-}
-</script>
-
-
 </html>
