@@ -177,8 +177,17 @@ Python Data Validation & Anomaly Detection System
 
 ---
 
+## How to Use
+1. Upload CSV/Excel file
+2. Click Analyze
+3. Review AI Score & outliers
+4. Export report
+
+---
+
 🔗 Live Demo (Web App):
 👉 https://data-validation-error-detection-tool.onrender.com/
 
 ✨ *Built with statistical intelligence, scientific rigor, and explainable AI principles.*
+
 
